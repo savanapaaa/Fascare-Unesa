@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Testing Image Handler - Infinite Loop Fix</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-image {
+            width: 200px;
+            height: 150px;
+            object-fit: cover;
+            border: 1px solid #ccc;
+            margin: 10px;
+        }
+        .image-status {
+            font-size: 12px;
+            margin: 5px 10px;
+        }
+        .status-loading { color: #007bff; }
+        .status-success { color: #28a745; }
+        .status-placeholder { color: #6c757d; }
+        .loading { opacity: 0.5; }
+        .error { border-color: #dc3545; }
+        .log {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        button {
+            padding: 8px 16px;
+            margin: 5px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-success { background: #28a745; color: white; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Testing Image Handler - Infinite Loop Fix</h1>
+    
+    <div class="test-section">
+        <h2>🔍 Debug Controls</h2>
+        <button class="btn-primary" onclick="runFullDebug()">Start Full Debug</button>
+        <button class="btn-primary" onclick="testImageLoading()">Test Image Loading</button>
+        <button class="btn-danger" onclick="disableAllAutoReload()">Disable Auto Reload</button>
+        <button class="btn-success" onclick="clearLogs()">Clear Logs</button>
+        
+        <div id="debug-log" class="log">Debug log will appear here...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>📷 Test Images</h2>
+        
+        <h3>Test 1: Image yang Ada</h3>
+        <img id="test1" class="test-image" data-src="/images/logo.png" alt="Test 1">
+        <div id="test1Status" class="image-status"></div>
+        
+        <h3>Test 2: Image yang Tidak Ada</h3>
+        <img id="test2" class="test-image" data-src="/images/not-found.jpg" alt="Test 2">
+        <div id="test2Status" class="image-status"></div>
+        
+        <h3>Test 3: Placeholder.jpg</h3>
+        <img id="test3" class="test-image" data-src="/images/placeholder.jpg" alt="Test 3">
+        <div id="test3Status" class="image-status"></div>
+        
+        <h3>Test 4: Manual Load</h3>
+        <img id="test4" class="test-image" alt="Test 4">
+        <div id="test4Status" class="image-status"></div>
+        <button class="btn-primary" onclick="loadTestImage4()">Load Image</button>
+        <button class="btn-danger" onclick="loadBrokenImage4()">Load Broken Image</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>📊 Statistics</h2>
+        <div id="stats" class="log">Statistics will appear here...</div>
+        <button class="btn-primary" onclick="updateStats()">Update Stats</button>
+        <button class="btn-danger" onclick="clearCache()">Clear Cache</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>🚨 Request Monitor</h2>
+        <div id="request-log" class="log">Request log will appear here...</div>
+        <button class="btn-primary" onclick="showRequestLog()">Show Request Log</button>
+        <button class="btn-danger" onclick="clearRequestLog()">Clear Request Log</button>
+    </div>
+
+    <!-- Include the fixed image handler -->
+    <script src="image-handler-fixed.js"></script>
+    
+    <!-- Include the debug script -->
+    <script src="debug-infinite-loop.js"></script>
+    
+    <script>
+        // Override console methods to show in page
+        const debugLogEl = document.getElementById('debug-log');
+        const originalConsole = {
+            log: console.log,
+            warn: console.warn,
+            error: console.error
+        };
+        
+        function addLogMessage(type, message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logMessage = `[${timestamp}] ${type.toUpperCase()}: ${message}\n`;
+            debugLogEl.textContent += logMessage;
+            debugLogEl.scrollTop = debugLogEl.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            addLogMessage('log', args.join(' '));
+            return originalConsole.log.apply(this, args);
+        };
+        
+        console.warn = function(...args) {
+            addLogMessage('warn', args.join(' '));
+            return originalConsole.warn.apply(this, args);
+        };
+        
+        console.error = function(...args) {
+            addLogMessage('error', args.join(' '));
+            return originalConsole.error.apply(this, args);
+        };
+        
+        // Test functions
+        function clearLogs() {
+            debugLogEl.textContent = 'Debug log cleared...\n';
+        }
+        
+        function updateStats() {
+            if (window.imageHandler) {
+                const stats = window.imageHandler.getCacheStats();
+                document.getElementById('stats').textContent = JSON.stringify(stats, null, 2);
+            } else {
+                document.getElementById('stats').textContent = 'ImageHandler not found';
+            }
+        }
+        
+        function clearCache() {
+            if (window.imageHandler) {
+                window.imageHandler.clearCache();
+                updateStats();
+                console.log('Cache cleared manually');
+            }
+        }
+        
+        function showRequestLog() {
+            if (window.getImageRequestLog) {
+                const log = window.getImageRequestLog();
+                document.getElementById('request-log').textContent = JSON.stringify(log, null, 2);
+            } else {
+                document.getElementById('request-log').textContent = 'Request monitoring not started';
+            }
+        }
+        
+        function clearRequestLog() {
+            if (window.clearImageRequestLog) {
+                window.clearImageRequestLog();
+                document.getElementById('request-log').textContent = 'Request log cleared...\n';
+            }
+        }
+        
+        function loadTestImage4() {
+            const img = document.getElementById('test4');
+            const status = document.getElementById('test4Status');
+            
+            window.imageHandler.loadImage(img, '/images/logo.png', {
+                showStatus: true,
+                statusElement: status,
+                onLoading: () => console.log('Test4: Loading started'),
+                onSuccess: () => console.log('Test4: Loading success'),
+                onError: (img, error) => console.log('Test4: Loading error:', error.message)
+            });
+        }
+        
+        function loadBrokenImage4() {
+            const img = document.getElementById('test4');
+            const status = document.getElementById('test4Status');
+            
+            window.imageHandler.loadImage(img, '/images/broken-' + Date.now() + '.jpg', {
+                showStatus: true,
+                statusElement: status,
+                onLoading: () => console.log('Test4: Loading broken started'),
+                onSuccess: () => console.log('Test4: Loading broken success'),
+                onError: (img, error) => console.log('Test4: Loading broken error:', error.message)
+            });
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Test page loaded');
+            
+            // Auto-start monitoring
+            if (window.monitorImageRequests) {
+                window.monitorImageRequests();
+                console.log('📡 Request monitoring started');
+            }
+            
+            // Auto-update stats every 5 seconds
+            setInterval(updateStats, 5000);
+            
+            console.log('✅ Test page ready. Check the debug sections above.');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Testing Image Handler - Anti-404 Spam</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-image {
+            width: 200px;
+            height: 150px;
+            object-fit: cover;
+            border: 2px solid #ddd;
+            margin: 10px;
+            border-radius: 4px;
+        }
+        .image-status {
+            font-size: 12px;
+            margin: 5px 10px;
+            padding: 4px 8px;
+            border-radius: 3px;
+        }
+        .status-loading { 
+            background: #e3f2fd; 
+            color: #1976d2; 
+            border: 1px solid #bbdefb;
+        }
+        .status-success { 
+            background: #e8f5e8; 
+            color: #2e7d32; 
+            border: 1px solid #c8e6c9;
+        }
+        .status-placeholder { 
+            background: #fff3e0; 
+            color: #f57c00; 
+            border: 1px solid #ffcc02;
+        }
+        .loading { 
+            opacity: 0.5; 
+            filter: grayscale(100%);
+        }
+        .error { 
+            border-color: #f44336; 
+            background: #ffebee;
+        }
+        .log {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+        }
+        button {
+            padding: 10px 16px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .btn-primary { background: #2196f3; color: white; }
+        .btn-primary:hover { background: #1976d2; }
+        .btn-danger { background: #f44336; color: white; }
+        .btn-danger:hover { background: #d32f2f; }
+        .btn-success { background: #4caf50; color: white; }
+        .btn-success:hover { background: #388e3c; }
+        .btn-warning { background: #ff9800; color: white; }
+        .btn-warning:hover { background: #f57c00; }
+        
+        .success { color: #4caf50; }
+        .error-text { color: #f44336; }
+        .warning { color: #ff9800; }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        h1 { color: #333; text-align: center; }
+        h2 { color: #555; border-bottom: 2px solid #2196f3; padding-bottom: 5px; }
+        h3 { color: #666; }
+    </style>
+</head>
+<body>
+    <h1>🛡️ Testing Image Handler - Anti-404 Spam Solution</h1>
+    
+    <div class="test-section">
+        <h2>🔧 Debug Controls</h2>
+        <button class="btn-primary" onclick="startFullTest()">🧪 Start Full Test</button>
+        <button class="btn-warning" onclick="testPlaceholderAvailability()">🔍 Test Placeholder Availability</button>
+        <button class="btn-success" onclick="setupGlobalFallback()">🛡️ Setup Global Fallback</button>
+        <button class="btn-danger" onclick="clearAllLogs()">🧹 Clear All Logs</button>
+        
+        <div id="debug-log" class="log">Debug log akan muncul di sini...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>📷 Test Cases - Image Loading</h2>
+        
+        <div class="grid">
+            <div>
+                <h3>✅ Test 1: Valid Image</h3>
+                <img id="test1" class="test-image" data-src="http://127.0.0.1:5000/images/placeholder.jpg" alt="Test 1">
+                <div id="test1Status" class="image-status">Pending...</div>
+                <button class="btn-primary" onclick="loadTest1()">Load Valid Image</button>
+            </div>
+            
+            <div>
+                <h3>❌ Test 2: 404 Image</h3>
+                <img id="test2" class="test-image" data-src="http://127.0.0.1:5000/images/not-found.jpg" alt="Test 2">
+                <div id="test2Status" class="image-status">Pending...</div>
+                <button class="btn-danger" onclick="loadTest2()">Load 404 Image</button>
+            </div>
+            
+            <div>
+                <h3>🔄 Test 3: Placeholder Direct</h3>
+                <img id="test3" class="test-image" alt="Test 3">
+                <div id="test3Status" class="image-status">Pending...</div>
+                <button class="btn-warning" onclick="loadTest3()">Load Placeholder</button>
+            </div>
+            
+            <div>
+                <h3>🛡️ Test 4: Auto Fallback</h3>
+                <img id="test4" class="test-image" src="http://127.0.0.1:5000/images/broken-auto.jpg" alt="Test 4">
+                <div id="test4Status" class="image-status">Auto fallback enabled</div>
+            </div>
+            
+            <div>
+                <h3>🔄 Test 5: Manual Retry</h3>
+                <img id="test5" class="test-image" alt="Test 5">
+                <div id="test5Status" class="image-status">Pending...</div>
+                <button class="btn-primary" onclick="loadTest5()">Load & Retry</button>
+            </div>
+            
+            <div>
+                <h3>📡 Test 6: Network Error</h3>
+                <img id="test6" class="test-image" alt="Test 6">
+                <div id="test6Status" class="image-status">Pending...</div>
+                <button class="btn-danger" onclick="loadTest6()">Simulate Network Error</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>📊 Statistics & Monitoring</h2>
+        <div id="stats" class="log">Statistik akan muncul di sini...</div>
+        <button class="btn-primary" onclick="updateStats()">🔄 Update Stats</button>
+        <button class="btn-warning" onclick="clearCache()">🗑️ Clear Cache</button>
+        <button class="btn-success" onclick="exportLogs()">📋 Export Logs</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>🚨 Request Monitor - Anti-Spam Detection</h2>
+        <div id="request-log" class="log">Request monitoring akan muncul di sini...</div>
+        <button class="btn-primary" onclick="showRequestLog()">📡 Show Request Log</button>
+        <button class="btn-danger" onclick="clearRequestLog()">🧹 Clear Request Log</button>
+        <button class="btn-warning" onclick="detectSpam()">🚨 Detect Spam Requests</button>
+    </div>
+
+    <!-- Include the fixed image handler -->
+    <script src="http://127.0.0.1:8000/image-handler-fixed.js"></script>
+    
+    <script>
+        // Enhanced console logging with visual feedback
+        const debugLogEl = document.getElementById('debug-log');
+        const requestLogEl = document.getElementById('request-log');
+        let requestLog = [];
+        let startTime = Date.now();
+        
+        const originalConsole = {
+            log: console.log,
+            warn: console.warn,
+            error: console.error
+        };
+        
+        function addLogMessage(type, message, element = debugLogEl) {
+            const timestamp = new Date().toLocaleTimeString();
+            const timeSinceStart = ((Date.now() - startTime) / 1000).toFixed(1);
+            const logMessage = `[${timestamp}] [+${timeSinceStart}s] ${type.toUpperCase()}: ${message}\n`;
+            element.textContent += logMessage;
+            element.scrollTop = element.scrollHeight;
+        }
+        
+        // Override console untuk visual feedback
+        console.log = function(...args) {
+            addLogMessage('info', args.join(' '));
+            return originalConsole.log.apply(this, args);
+        };
+        
+        console.warn = function(...args) {
+            addLogMessage('warn', args.join(' '));
+            return originalConsole.warn.apply(this, args);
+        };
+        
+        console.error = function(...args) {
+            addLogMessage('error', args.join(' '));
+            return originalConsole.error.apply(this, args);
+        };
+        
+        // Enhanced fetch monitoring untuk detect spam
+        const originalFetch = window.fetch;
+        window.fetch = function(...args) {
+            const url = args[0];
+            const timestamp = Date.now();
+            
+            if (url && typeof url === 'string' && url.includes('images/')) {
+                requestLog.push({
+                    url,
+                    timestamp,
+                    timeSinceStart: timestamp - startTime
+                });
+                
+                addLogMessage('request', `Fetching: ${url}`, requestLogEl);
+                
+                // Detect spam - lebih dari 3 request ke URL yang sama dalam 2 detik
+                const recentRequests = requestLog.filter(req => 
+                    req.url === url && 
+                    timestamp - req.timestamp < 2000
+                );
+                
+                if (recentRequests.length > 3) {
+                    addLogMessage('SPAM', `🚨 SPAM DETECTED! ${recentRequests.length} requests to ${url}`, requestLogEl);
+                    console.error('🚨 SPAM REQUEST DETECTED!', {
+                        url,
+                        count: recentRequests.length,
+                        timeWindow: '2 seconds'
+                    });
+                }
+            }
+            
+            return originalFetch.apply(this, args);
+        };
+        
+        // Test functions
+        function clearAllLogs() {
+            debugLogEl.textContent = 'Debug log cleared...\n';
+            requestLogEl.textContent = 'Request log cleared...\n';
+            requestLog = [];
+            startTime = Date.now();
+        }
+        
+        function updateStats() {
+            if (window.imageHandler) {
+                const stats = window.imageHandler.getCacheStats();
+                document.getElementById('stats').textContent = JSON.stringify(stats, null, 2);
+            } else {
+                document.getElementById('stats').textContent = 'ImageHandler not found';
+            }
+        }
+        
+        function clearCache() {
+            if (window.imageHandler) {
+                window.imageHandler.clearCache();
+                updateStats();
+                console.log('🧹 Cache cleared manually');
+            }
+        }
+        
+        function showRequestLog() {
+            document.getElementById('request-log').textContent = JSON.stringify(requestLog, null, 2);
+        }
+        
+        function clearRequestLog() {
+            requestLog = [];
+            requestLogEl.textContent = 'Request log cleared...\n';
+        }
+        
+        function detectSpam() {
+            const now = Date.now();
+            const spamDetection = {};
+            
+            requestLog.forEach(req => {
+                if (now - req.timestamp < 10000) { // 10 detik terakhir
+                    spamDetection[req.url] = (spamDetection[req.url] || 0) + 1;
+                }
+            });
+            
+            const spamUrls = Object.entries(spamDetection).filter(([url, count]) => count > 5);
+            
+            if (spamUrls.length > 0) {
+                console.error('🚨 SPAM URLs detected:', spamUrls);
+                addLogMessage('SPAM', `Found ${spamUrls.length} spam URLs`, requestLogEl);
+            } else {
+                console.log('✅ No spam detected');
+            }
+        }
+        
+        function exportLogs() {
+            const data = {
+                debugLog: debugLogEl.textContent,
+                requestLog: requestLog,
+                stats: window.imageHandler ? window.imageHandler.getCacheStats() : null,
+                timestamp: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `image-handler-test-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        // Test loading functions
+        async function testPlaceholderAvailability() {
+            if (window.imageHandler) {
+                const available = await window.imageHandler.testPlaceholderAvailability();
+                console.log(`🔍 Placeholder availability: ${available ? '✅ Available' : '❌ Not available'}`);
+            }
+        }
+        
+        function setupGlobalFallback() {
+            if (window.imageHandler) {
+                window.imageHandler.setupGlobalImageFallback();
+                console.log('🛡️ Global fallback setup completed');
+            }
+        }
+        
+        function loadTest1() {
+            const img = document.getElementById('test1');
+            const status = document.getElementById('test1Status');
+            
+            window.imageHandler.loadImage(img, 'http://127.0.0.1:5000/images/placeholder.jpg', {
+                showStatus: true,
+                statusElement: status,
+                onLoading: () => console.log('Test1: Loading valid image'),
+                onSuccess: () => console.log('Test1: ✅ Success'),
+                onError: (img, error) => console.log('Test1: ❌ Error:', error.message)
+            });
+        }
+        
+        function loadTest2() {
+            const img = document.getElementById('test2');
+            const status = document.getElementById('test2Status');
+            
+            window.imageHandler.loadImage(img, 'http://127.0.0.1:5000/images/not-found-' + Date.now() + '.jpg', {
+                showStatus: true,
+                statusElement: status,
+                onLoading: () => console.log('Test2: Loading 404 image'),
+                onSuccess: () => console.log('Test2: ✅ Success (unexpected)'),
+                onError: (img, error) => console.log('Test2: ❌ Error (expected):', error.message)
+            });
+        }
+        
+        async function loadTest3() {
+            const img = document.getElementById('test3');
+            const status = document.getElementById('test3Status');
+            
+            await window.imageHandler.setPlaceholderSafely(img, status, 'Placeholder loaded');
+            console.log('Test3: Placeholder set');
+        }
+        
+        function loadTest5() {
+            const img = document.getElementById('test5');
+            const status = document.getElementById('test5Status');
+            
+            // Load gagal dulu
+            window.imageHandler.loadImage(img, 'http://127.0.0.1:5000/images/will-fail.jpg', {
+                showStatus: true,
+                statusElement: status,
+                onError: () => {
+                    console.log('Test5: First load failed, retrying...');
+                    // Retry dengan gambar yang valid
+                    setTimeout(() => {
+                        window.imageHandler.retryImage(img, 'http://127.0.0.1:5000/images/placeholder.jpg', {
+                            showStatus: true,
+                            statusElement: status
+                        });
+                    }, 1000);
+                }
+            });
+        }
+        
+        function loadTest6() {
+            const img = document.getElementById('test6');
+            const status = document.getElementById('test6Status');
+            
+            // Simulate network error dengan URL yang invalid
+            window.imageHandler.loadImage(img, 'http://invalid-domain-12345.com/image.jpg', {
+                showStatus: true,
+                statusElement: status,
+                onLoading: () => console.log('Test6: Simulating network error'),
+                onError: (img, error) => console.log('Test6: ❌ Network error (expected):', error.message)
+            });
+        }
+        
+        function startFullTest() {
+            console.log('🚀 Starting full test suite...');
+            clearAllLogs();
+            
+            // Setup global fallback
+            setupGlobalFallback();
+            
+            // Test placeholder availability
+            testPlaceholderAvailability();
+            
+            // Run all tests dengan delay
+            setTimeout(loadTest1, 500);
+            setTimeout(loadTest2, 1000);
+            setTimeout(loadTest3, 1500);
+            setTimeout(loadTest5, 2000);
+            setTimeout(loadTest6, 2500);
+            
+            // Update stats periodically
+            setInterval(updateStats, 3000);
+            
+            console.log('✅ Full test suite initiated');
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Test page loaded and ready');
+            
+            // Auto-setup fallback untuk test4
+            if (window.imageHandler) {
+                const test4 = document.getElementById('test4');
+                window.imageHandler.addImageFallback(test4);
+            }
+            
+            // Auto-update stats setiap 5 detik
+            setInterval(updateStats, 5000);
+            
+            console.log('✅ Test page initialization complete');
+            console.log('📖 Click "Start Full Test" to begin testing');
+        });
+    </script>
+</body>
+</html>
